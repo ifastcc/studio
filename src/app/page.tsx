@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
@@ -237,13 +236,7 @@ export default function Home() {
             <DropdownMenuItem>
               <div className="flex flex-col space-y-1">
                 Line Height
-                <Slider
-                  defaultValue={[lineHeight]}
-                  max={3}
-                  min={1}
-                  step={0.1}
-                  onValueChange={(value) => setLineHeight(value[0])}
-                />
+                
               </div>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -276,43 +269,24 @@ export default function Home() {
         <div className="p-4">
           <Card className="w-full">
             <CardContent>
-              <div className="flex flex-col space-y-2 items-center">
-                <label htmlFor="delayPerToken" className="text-sm font-medium">
-                  Output Speed (tokens/sec): {outputSpeed}
-                </label>
-                <Slider
-                  id="delayPerToken"
-                  defaultValue={[delayPerToken]}
-                  min={10}
-                  max={200}
-                  step={1}
-                  onValueChange={(value) => setDelayPerToken(value[0])}
-                  className="w-full"
-                />
-              </div>
+                <div className="flex flex-col space-y-2">
+                  <label htmlFor="pauseMultiplier" className="text-sm font-medium">
+                    Pause Multiplier:
+                  </label>
+                  <Input
+                    type="number"
+                    id="pauseMultiplier"
+                    value={pauseMultiplier}
+                    onChange={(e) => setPauseMultiplier(Number(e.target.value))}
+                    className="text-sm"
+                  />
+                </div>
             </CardContent>
           </Card>
         </div>
 
       
-      <div className="p-4">
-        <Card className="w-full">
-          <CardContent>
-            <div className="flex flex-col space-y-2">
-              <label htmlFor="pauseMultiplier" className="text-sm font-medium">
-                Pause Multiplier:
-              </label>
-              <Input
-                type="number"
-                id="pauseMultiplier"
-                value={pauseMultiplier}
-                onChange={(e) => setPauseMultiplier(Number(e.target.value))}
-                className="text-sm"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+       
 
       
       <div className="flex-grow p-4">
@@ -331,6 +305,24 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
+       <div className="p-4">
+          <Card className="w-full">
+            <CardContent>
+              <div className="flex flex-col space-y-2 items-center">
+                <label htmlFor="delayPerToken" className="text-sm font-medium">
+                  Output Speed (tokens/sec): {outputSpeed}
+                </label>
+                <Input
+                    type="number"
+                    id="delayPerToken"
+                    value={delayPerToken}
+                    onChange={(e) => setDelayPerToken(Number(e.target.value))}
+                    className="text-sm"
+                  />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
     </div>
     
   );
