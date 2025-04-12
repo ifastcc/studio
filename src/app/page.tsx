@@ -50,11 +50,26 @@ export default function Home() {
 
   // Function to parse text into tokens with Markdown support
  const parseText = useCallback((text: string) => {
-    // Split the text by whitespace, punctuation, and newlines
     const splitRegex = markdownEnabled
       ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g
       : /(\s+|[.?!,;:—…]+|\n)/g;
-    return text.split(splitRegex).filter((token) => token !== "");
+
+    // Improved splitting logic to handle Chinese characters
+    const chineseRegex = /([\u4e00-\u9fff]+)/g; // Regex to match Chinese characters
+    let newTokens: string[] = [];
+    text.split(chineseRegex).forEach(part => {
+      if (part) {
+        if (/[\u4e00-\u9fff]/.test(part)) {
+          // If the part contains Chinese characters, split it into individual characters
+          newTokens.push(...part.split(''));
+        } else {
+          // Otherwise, use the existing regex to split the part
+          newTokens.push(...part.split(splitRegex).filter(token => token !== ""));
+        }
+      }
+    });
+
+    return newTokens;
   }, [markdownEnabled]);
 
   useEffect(() => {
