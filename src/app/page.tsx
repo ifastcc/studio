@@ -51,12 +51,15 @@ export default function Home() {
   // Function to parse text into tokens with Markdown support
   const parseText = useCallback((text: string) => {
     const splitRegex = markdownEnabled ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g : /(\s+|[.?!,;:—…]+|\n)/g;
-    return text.split(splitRegex).filter(token => token && token.trim() !== '');
+    return text.split(splitRegex).filter(token => token !== '');
   }, [markdownEnabled]);
 
   useEffect(() => {
-    setTokens(parseText(text));
-  }, [text, parseText]);
+    // Keep whitespace and newlines when splitting into tokens.
+    const splitRegex = markdownEnabled ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n|\r)/g : /(\s+|[.?!,;:—…]+|\n|\r)/g;
+    const newTokens = text.split(splitRegex).filter(token => token !== '');
+    setTokens(newTokens);
+  }, [text, markdownEnabled]);
 
   const calculateDelay = useCallback((token: string) => {
     let baseDelay = 60000 / wpm; // ms per word
