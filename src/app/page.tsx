@@ -9,6 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Toaster } from "@/components/ui/toaster";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -17,9 +21,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Toaster } from "@/components/ui/toaster";
 
 const PAUSE_DURATIONS = {
   '.': 500,
@@ -33,11 +34,17 @@ const PAUSE_DURATIONS = {
   '\n': 200, // Add pause for new lines
 };
 
+// Predefined documents
+const PREDEFINED_DOCS = {
+  'example.md': '## Example Markdown\n\nThis is an example document with **bold**, *italic*, and `code`.\n\n- List item 1\n- List item 2\n',
+  'lorem.txt': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+};
+
 export default function Home() {
   const [text, setText] = useState('');
   const [displayedMarkdown, setDisplayedMarkdown] = useState('');
   const [tokens, setTokens] = useState<string[]>([]);
-  const [delayPerToken, setDelayPerToken] = useState(50);
+  const [outputSpeed, setOutputSpeed] = useState(20); // tokens/sec
   const [pauseMultiplier, setPauseMultiplier] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -46,32 +53,34 @@ export default function Home() {
   const [lineHeight, setLineHeight] = useState(1.5);
 
   const { toast } = useToast();
-
   const wordRef = useRef<HTMLDivElement>(null);
+
+    const delayPerToken = 1000 / outputSpeed;
+
 
   // Function to parse text into tokens with Markdown support
   const parseText = useCallback((text: string) => {
-    const splitRegex = markdownEnabled
-      ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g
-      : /(\s+|[.?!,;:—…]+|\n)/g;
+      const splitRegex = markdownEnabled
+        ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g
+        : /(\s+|[.?!,;:—…]+|\n)/g;
 
-    // Improved splitting logic to handle Chinese characters
-    const chineseRegex = /([\u4e00-\u9fff]+)/g; // Regex to match Chinese characters
-    let newTokens: string[] = [];
-    text.split(chineseRegex).forEach(part => {
-      if (part) {
-        if (/[\u4e00-\u9fff]/.test(part)) {
-          // If the part contains Chinese characters, split it into individual characters
-          newTokens.push(...part.split(''));
-        } else {
-          // Otherwise, use the existing regex to split the part
-          newTokens.push(...part.split(splitRegex).filter(token => token !== ""));
+      // Improved splitting logic to handle Chinese characters
+      const chineseRegex = /([\u4e00-\u9fff]+)/g; // Regex to match Chinese characters
+      let newTokens: string[] = [];
+      text.split(chineseRegex).forEach(part => {
+        if (part) {
+          if (/[\u4e00-\u9fff]/.test(part)) {
+            // If the part contains Chinese characters, split it into individual characters
+            newTokens.push(...part.split(''));
+          } else {
+            // Otherwise, use the existing regex to split the part
+            newTokens.push(...part.split(splitRegex).filter(token => token !== ""));
+          }
         }
-      }
-    });
+      });
 
-    return newTokens;
-  }, [markdownEnabled]);
+      return newTokens;
+    }, [markdownEnabled]);
 
   useEffect(() => {
     const newTokens = parseText(text);
@@ -110,10 +119,7 @@ export default function Home() {
   }, [isPlaying, currentWordIndex, tokens, calculateDelay, toast]);
 
   const togglePlay = () => {
-    setIsPlaying(prevIsPlaying => {
-      // If pausing, just toggle the state
-      return !prevIsPlaying;
-    });
+    setIsPlaying(prevIsPlaying => !prevIsPlaying);
   };
 
   const reset = () => {
@@ -162,12 +168,12 @@ export default function Home() {
 
        if (event.code === 'ArrowUp') {
           event.preventDefault();
-          setDelayPerToken(prevDelay => Math.max(1, prevDelay - 5)); // Increase speed
+          setOutputSpeed(prevSpeed => Math.min(100, prevSpeed + 5)); // Increase speed
         }
 
         if (event.code === 'ArrowDown') {
           event.preventDefault();
-          setDelayPerToken(prevDelay => prevDelay + 5); // Decrease speed
+          setOutputSpeed(prevSpeed => Math.max(1, prevSpeed - 5)); // Decrease speed
         }
     };
 
@@ -178,15 +184,17 @@ export default function Home() {
     };
   }, [isPlaying, togglePlay, currentWordIndex, tokens, displayedMarkdown]);
 
-  const outputSpeed = Math.round(1000 / delayPerToken);
+
+  const handlePredefinedDocLoad = (docName: string) => {
+    setText(PREDEFINED_DOCS[docName]);
+    reset();
+  };
 
   return (
-    
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <Toaster />
 
-      
-      <div className="sticky top-0 bg-secondary p-4 flex items-center justify-between">
+      <header className="sticky top-0 bg-secondary p-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Button onClick={togglePlay}>
             {isPlaying ? <Icons.pause /> : <Icons.play />}
@@ -203,10 +211,8 @@ export default function Home() {
           <div>
             Pause Multiplier: {pauseMultiplier}x
           </div>
-
         </div>
 
-        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline">
@@ -233,97 +239,90 @@ export default function Home() {
                 </div>
               </div>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <div className="flex flex-col space-y-1">
-                Line Height
-                
-              </div>
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+      </header>
 
-      
-      <div className="p-4">
-        <Textarea
-          placeholder="Paste your text or upload a file..."
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          className="mb-4"
-        />
-        <div className="flex items-center space-x-4">
-          <label htmlFor="upload" className="text-sm font-medium">
-            Upload File:
-          </label>
-          <Input
-            type="file"
-            id="upload"
-            onChange={handleFileUpload}
-            className="text-sm"
-            accept=".txt,.md"
-          />
-        </div>
-      </div>
-
-       
-        <div className="p-4">
-          <Card className="w-full">
-            <CardContent>
-                <div className="flex flex-col space-y-2">
-                  <label htmlFor="pauseMultiplier" className="text-sm font-medium">
-                    Pause Multiplier:
-                  </label>
-                  <Input
-                    type="number"
-                    id="pauseMultiplier"
-                    value={pauseMultiplier}
-                    onChange={(e) => setPauseMultiplier(Number(e.target.value))}
-                    className="text-sm"
-                  />
-                </div>
-            </CardContent>
-          </Card>
-        </div>
-
-      
-       
-
-      
-      <div className="flex-grow p-4">
-        <Card>
-          <CardContent>
-            <div className="h-[400px] relative overflow-auto whitespace-pre-line">
-                <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                        p: React.Fragment,
-                    }}
-                >
-                    {displayedMarkdown}
-                </ReactMarkdown>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-       <div className="p-4">
-          <Card className="w-full">
-            <CardContent>
-              <div className="flex flex-col space-y-2 items-center">
-                <label htmlFor="delayPerToken" className="text-sm font-medium">
-                  Output Speed (tokens/sec): {outputSpeed}
+      <div className="flex flex-col md:flex-row p-4 space-y-4 md:space-y-0 md:space-x-4">
+        <div className="w-full md:w-1/3">
+          <Card>
+            <CardContent className="flex flex-col space-y-4">
+              <Textarea
+                placeholder="Paste your text or upload a file..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="mb-4"
+              />
+              <div className="flex items-center space-x-4">
+                <label htmlFor="upload" className="text-sm font-medium">
+                  Upload File:
                 </label>
                 <Input
-                    type="number"
-                    id="delayPerToken"
-                    value={delayPerToken}
-                    onChange={(e) => setDelayPerToken(Number(e.target.value))}
-                    className="text-sm"
+                  type="file"
+                  id="upload"
+                  onChange={handleFileUpload}
+                  className="text-sm"
+                  accept=".txt,.md"
+                />
+              </div>
+
+                <div>
+                  <label htmlFor="outputSpeed" className="text-sm font-medium">
+                    Output Speed (tokens/sec):
+                  </label>
+                  <Input
+                      type="number"
+                      id="outputSpeed"
+                      value={outputSpeed}
+                      onChange={(e) => setOutputSpeed(Number(e.target.value))}
+                      className="text-sm"
                   />
+                </div>
+
+              <div className="flex flex-col space-y-2">
+                <label htmlFor="pauseMultiplier" className="text-sm font-medium">
+                  Pause Multiplier:
+                </label>
+                <Input
+                  type="number"
+                  id="pauseMultiplier"
+                  value={pauseMultiplier}
+                  onChange={(e) => setPauseMultiplier(Number(e.target.value))}
+                  className="text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Load Example:</label>
+                <div className="flex flex-col space-y-2">
+                  {Object.keys(PREDEFINED_DOCS).map(docName => (
+                    <Button key={docName} variant="outline" size="sm" onClick={() => handlePredefinedDocLoad(docName)}>
+                      {docName}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        <div className="flex-grow">
+          <Card>
+            <CardContent>
+              <ScrollArea className="h-[500px] relative overflow-auto whitespace-pre-line">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    p: React.Fragment,
+                    br: () => <br />, // Keep line breaks
+                  }}
+                >
+                  {displayedMarkdown}
+                </ReactMarkdown>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
-    
   );
 }
