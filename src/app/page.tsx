@@ -38,7 +38,7 @@ export default function Home() {
   const [text, setText] = useState('');
   const [displayedMarkdown, setDisplayedMarkdown] = useState('');
   const [tokens, setTokens] = useState<string[]>([]);
-  const [delayPerToken, setDelayPerToken] = useState(100);
+  const [delayPerToken, setDelayPerToken] = useState(50);
   const [pauseMultiplier, setPauseMultiplier] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -113,15 +113,7 @@ export default function Home() {
   const togglePlay = () => {
     setIsPlaying(prevIsPlaying => {
       // If pausing, just toggle the state
-      if (prevIsPlaying) {
-        return false;
-      } else {
-        // If starting, and at the beginning, reset the display
-        if (currentWordIndex === 0) {
-          setDisplayedMarkdown('');
-        }
-        return true;
-      }
+      return !prevIsPlaying;
     });
   };
 
@@ -168,6 +160,16 @@ export default function Home() {
         setCurrentWordIndex(Math.min(tokens.length, currentWordIndex + 50));
         setDisplayedMarkdown(tokens.slice(0, Math.min(tokens.length, currentWordIndex + 50)).join(''));
       }
+
+       if (event.code === 'ArrowUp') {
+          event.preventDefault();
+          setDelayPerToken(prevDelay => Math.max(1, prevDelay - 5)); // Increase speed
+        }
+
+        if (event.code === 'ArrowDown') {
+          event.preventDefault();
+          setDelayPerToken(prevDelay => prevDelay + 5); // Decrease speed
+        }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -176,6 +178,8 @@ export default function Home() {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isPlaying, togglePlay, currentWordIndex, tokens, displayedMarkdown]);
+
+  const outputSpeed = Math.round(1000 / delayPerToken);
 
   return (
     
@@ -193,12 +197,14 @@ export default function Home() {
             <Icons.reset />
             Reset
           </Button>
+
           <div>
-            Delay Per Token: {delayPerToken}ms
+            Output Speed: {outputSpeed} tokens/sec
           </div>
           <div>
             Pause Multiplier: {pauseMultiplier}x
           </div>
+
         </div>
 
         
@@ -266,26 +272,31 @@ export default function Home() {
         </div>
       </div>
 
-      
-      <div className="p-4 flex space-x-4">
-        <Card className="w-1/2">
-          <CardContent>
-            <div className="flex flex-col space-y-2">
-              <label htmlFor="delayPerToken" className="text-sm font-medium">
-                Delay Per Token (ms):
-              </label>
-              <Input
-                type="number"
-                id="delayPerToken"
-                value={delayPerToken}
-                onChange={(e) => setDelayPerToken(Number(e.target.value))}
-                className="text-sm"
-              />
-            </div>
-          </CardContent>
-        </Card>
+       
+        <div className="p-4">
+          <Card className="w-full">
+            <CardContent>
+              <div className="flex flex-col space-y-2 items-center">
+                <label htmlFor="delayPerToken" className="text-sm font-medium">
+                  Output Speed (tokens/sec): {outputSpeed}
+                </label>
+                <Slider
+                  id="delayPerToken"
+                  defaultValue={[delayPerToken]}
+                  min={10}
+                  max={200}
+                  step={1}
+                  onValueChange={(value) => setDelayPerToken(value[0])}
+                  className="w-full"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card className="w-1/2">
+      
+      <div className="p-4">
+        <Card className="w-full">
           <CardContent>
             <div className="flex flex-col space-y-2">
               <label htmlFor="pauseMultiplier" className="text-sm font-medium">
