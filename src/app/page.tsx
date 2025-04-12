@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Icons } from "@/components/icons";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import {
@@ -19,6 +18,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const PAUSE_DURATIONS = {
   '.': 500,
@@ -33,6 +34,7 @@ const PAUSE_DURATIONS = {
 
 export default function Home() {
   const [text, setText] = useState('');
+  const [displayedMarkdown, setDisplayedMarkdown] = useState('');
   const [tokens, setTokens] = useState<string[]>([]);
   const [wpm, setWpm] = useState(200);
   const [pauseMultiplier, setPauseMultiplier] = useState(1);
@@ -74,25 +76,17 @@ export default function Home() {
       const delay = calculateDelay(tokens[currentWordIndex]);
 
       timeoutId = setTimeout(() => {
+        setDisplayedMarkdown(prevMarkdown => prevMarkdown + tokens[currentWordIndex]);
         setCurrentWordIndex(prevIndex => prevIndex + 1);
-        // Scroll logic
-        if (wordRef.current) {
-          wordRef.current.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'nearest',
-          });
-        }
       }, delay);
-    }
-
-    // Reset if finished
-    if (isPlaying && currentWordIndex >= tokens.length) {
+    } else if (isPlaying && currentWordIndex >= tokens.length) {
       setIsPlaying(false);
       toast({
         title: "Finished!",
         description: "You've reached the end of the text.",
       });
+    } else {
+      setDisplayedMarkdown('');
     }
 
     return () => clearTimeout(timeoutId);
@@ -100,11 +94,15 @@ export default function Home() {
 
   const togglePlay = () => {
     setIsPlaying(prevIsPlaying => !prevIsPlaying);
+    if (!isPlaying) {
+        setCurrentWordIndex(0);
+    }
   };
 
   const reset = () => {
     setIsPlaying(false);
     setCurrentWordIndex(0);
+    setDisplayedMarkdown('');
   };
 
   // Function to handle file upload
@@ -173,7 +171,7 @@ export default function Home() {
                 <div className="flex space-x-2">
                   <Button size="xs" variant={fontSize === 'sm' ? 'default' : 'outline'} onClick={() => setFontSize('sm')}>Small</Button>
                   <Button size="xs" variant={fontSize === 'md' ? 'default' : 'outline'} onClick={() => setFontSize('md')}>Medium</Button>
-                  <Button size="xs" variant={fontSize === 'lg' ? 'default' : 'outline'} onClick={() => setFontSize('lg')}>Large</Button>
+                  <Button size="xs" variant={fontSize === 'lg' ? 'default' : 'outline'} onClick={()={() => setFontSize('lg')}>Large</Button>
                 </div>
               </div>
             </DropdownMenuItem>
@@ -256,22 +254,15 @@ export default function Home() {
       <div className="flex-grow p-4">
         <Card>
           <CardContent>
-            <ScrollArea className="h-[400px] relative">
-              <div className="flex flex-col">
-                {tokens.map((token, index) => (
-                  <span
-                    key={index}
-                    ref={currentWordIndex === index ? wordRef : null}
-                    className={`inline-block ${currentWordIndex === index ? 'text-primary' : ''}
-                     ${fontSize === 'sm' ? 'text-sm' : fontSize === 'lg' ? 'text-lg' : 'text-md'}
-                     `}
-                    style={{ lineHeight: `${lineHeight}em` }}
-                  >
-                    {token}
-                  </span>
-                ))}
-              </div>
-            </ScrollArea>
+            <div className="h-[400px] relative overflow-auto">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                className={`markdown-body ${fontSize === 'sm' ? 'text-sm' : fontSize === 'lg' ? 'text-lg' : 'text-md'}`}
+                style={{ lineHeight: `${lineHeight}em` }}
+              >
+                {displayedMarkdown}
+              </ReactMarkdown>
+            </div>
           </CardContent>
         </Card>
       </div>
