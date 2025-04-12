@@ -9,7 +9,6 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import { Toaster } from "@/components/ui/toaster";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Toaster } from "@/components/ui/toaster";
 
 const PAUSE_DURATIONS = {
   '.': 500,
@@ -50,7 +50,7 @@ export default function Home() {
 
   // Function to parse text into tokens with Markdown support
   const parseText = useCallback((text: string) => {
-    const splitRegex = markdownEnabled ? /(\s+|[.?!,;:—…]+|\*\*|\*|`)/g : /(\s+|[.?!,;:—…]+)/g;
+    const splitRegex = markdownEnabled ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g : /(\s+|[.?!,;:—…]+|\n)/g;
     return text.split(splitRegex).filter(token => token && token.trim() !== '');
   }, [markdownEnabled]);
 
@@ -292,6 +292,7 @@ export default function Home() {
                       style={{
                         fontSize: fontSize === 'sm' ? '14px' : fontSize === 'lg' ? '18px' : '16px',
                         lineHeight: `${lineHeight}em`,
+                        whiteSpace: 'pre-wrap', // Preserve newlines
                       }}
                     />
                   ),
