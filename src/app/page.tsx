@@ -49,17 +49,19 @@ export default function Home() {
   const wordRef = useRef<HTMLDivElement>(null);
 
   // Function to parse text into tokens with Markdown support
-  const parseText = useCallback((text: string) => {
-    const splitRegex = markdownEnabled ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g : /(\s+|[.?!,;:—…]+|\n)/g;
-    return text.split(splitRegex).filter(token => token !== '');
+ const parseText = useCallback((text: string) => {
+    // Split the text by whitespace, punctuation, and newlines
+    const splitRegex = markdownEnabled
+      ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g
+      : /(\s+|[.?!,;:—…]+|\n)/g;
+    return text.split(splitRegex).filter((token) => token !== "");
   }, [markdownEnabled]);
 
   useEffect(() => {
-    // Keep whitespace and newlines when splitting into tokens.
-    const splitRegex = markdownEnabled ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n|\r)/g : /(\s+|[.?!,;:—…]+|\n|\r)/g;
-    const newTokens = text.split(splitRegex).filter(token => token !== '');
+    const newTokens = parseText(text);
     setTokens(newTokens);
-  }, [text, markdownEnabled]);
+  }, [text, parseText]);
+
 
   const calculateDelay = useCallback((token: string) => {
     let baseDelay = 60000 / wpm; // ms per word
@@ -288,18 +290,6 @@ export default function Home() {
             <div className="h-[400px] relative overflow-auto">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                components={{
-                  p: ({ node, ...props }) => (
-                    <p
-                      {...props}
-                      style={{
-                        fontSize: fontSize === 'sm' ? '14px' : fontSize === 'lg' ? '18px' : '16px',
-                        lineHeight: `${lineHeight}em`,
-                        whiteSpace: 'pre-wrap', // Preserve newlines
-                      }}
-                    />
-                  ),
-                }}
               >
                 {displayedMarkdown}
               </ReactMarkdown>
