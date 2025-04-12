@@ -21,6 +21,18 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 const PAUSE_DURATIONS = {
   '.': 500,
@@ -44,43 +56,43 @@ export default function Home() {
   const [text, setText] = useState('');
   const [displayedMarkdown, setDisplayedMarkdown] = useState('');
   const [tokens, setTokens] = useState<string[]>([]);
-  const [outputSpeed, setOutputSpeed] = useState(20); // tokens/sec
+  const [delayPerToken, setDelayPerToken] = useState(50);
   const [pauseMultiplier, setPauseMultiplier] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [markdownEnabled, setMarkdownEnabled] = useState(true);
   const [fontSize, setFontSize] = useState<'sm' | 'md' | 'lg'>('md');
   const [lineHeight, setLineHeight] = useState(1.5);
+  const [showSidebar, setShowSidebar] = useState(true);
 
   const { toast } = useToast();
   const wordRef = useRef<HTMLDivElement>(null);
 
-    const delayPerToken = 1000 / outputSpeed;
-
+  const outputSpeed = 1000/delayPerToken;
 
   // Function to parse text into tokens with Markdown support
   const parseText = useCallback((text: string) => {
-      const splitRegex = markdownEnabled
-        ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g
-        : /(\s+|[.?!,;:—…]+|\n)/g;
+    const splitRegex = markdownEnabled
+      ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g
+      : /(\s+|[.?!,;:—…]+|\n)/g;
 
-      // Improved splitting logic to handle Chinese characters
-      const chineseRegex = /([\u4e00-\u9fff]+)/g; // Regex to match Chinese characters
-      let newTokens: string[] = [];
-      text.split(chineseRegex).forEach(part => {
-        if (part) {
-          if (/[\u4e00-\u9fff]/.test(part)) {
-            // If the part contains Chinese characters, split it into individual characters
-            newTokens.push(...part.split(''));
-          } else {
-            // Otherwise, use the existing regex to split the part
-            newTokens.push(...part.split(splitRegex).filter(token => token !== ""));
-          }
+    // Improved splitting logic to handle Chinese characters
+    const chineseRegex = /([\u4e00-\u9fff]+)/g; // Regex to match Chinese characters
+    let newTokens: string[] = [];
+    text.split(chineseRegex).forEach(part => {
+      if (part) {
+        if (/[\u4e00-\u9fff]/.test(part)) {
+          // If the part contains Chinese characters, split it into individual characters
+          newTokens.push(...part.split(''));
+        } else {
+          // Otherwise, use the existing regex to split the part
+          newTokens.push(...part.split(splitRegex).filter(token => token !== ""));
         }
-      });
+      }
+    });
 
-      return newTokens;
-    }, [markdownEnabled]);
+    return newTokens;
+  }, [markdownEnabled]);
 
   useEffect(() => {
     const newTokens = parseText(text);
@@ -166,15 +178,15 @@ export default function Home() {
         setDisplayedMarkdown(tokens.slice(0, Math.min(tokens.length, currentWordIndex + 50)).join(''));
       }
 
-       if (event.code === 'ArrowUp') {
-          event.preventDefault();
-          setOutputSpeed(prevSpeed => Math.min(100, prevSpeed + 5)); // Increase speed
-        }
+      if (event.code === 'ArrowUp') {
+        event.preventDefault();
+        setDelayPerToken(prevDelay => Math.max(1, prevDelay - 5)); // Decrease delay, increase speed
+      }
 
-        if (event.code === 'ArrowDown') {
-          event.preventDefault();
-          setOutputSpeed(prevSpeed => Math.max(1, prevSpeed - 5)); // Decrease speed
-        }
+      if (event.code === 'ArrowDown') {
+        event.preventDefault();
+        setDelayPerToken(prevDelay => Math.min(500, prevDelay + 5)); // Increase delay, decrease speed
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -182,12 +194,19 @@ export default function Home() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isPlaying, togglePlay, currentWordIndex, tokens, displayedMarkdown]);
-
+  }, [isPlaying, togglePlay, currentWordIndex, tokens, displayedMarkdown, delayPerToken]);
 
   const handlePredefinedDocLoad = (docName: string) => {
     setText(PREDEFINED_DOCS[docName]);
     reset();
+  };
+
+  const toggleSidebar = () => {
+    setShowSidebar(!showSidebar);
+  };
+
+  const renderLineBreaks = (text: string) => {
+    return text.split('\n').join('  \n');
   };
 
   return (
@@ -196,6 +215,10 @@ export default function Home() {
 
       <header className="sticky top-0 bg-secondary p-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
+          <Button onClick={toggleSidebar}>
+            <Icons.file />
+            File
+          </Button>
           <Button onClick={togglePlay}>
             {isPlaying ? <Icons.pause /> : <Icons.play />}
             {isPlaying ? 'Pause' : 'Play'}
@@ -206,7 +229,7 @@ export default function Home() {
           </Button>
 
           <div>
-            Output Speed: {outputSpeed} tokens/sec
+            Output Speed: {outputSpeed.toFixed(1)} tokens/sec
           </div>
           <div>
             Pause Multiplier: {pauseMultiplier}x
@@ -239,71 +262,82 @@ export default function Home() {
                 </div>
               </div>
             </DropdownMenuItem>
+            <DropdownMenuItem>
+              <div className="flex flex-col space-y-1">
+                Delay Per Token (ms):
+                <Input
+                  type="number"
+                  value={delayPerToken}
+                  onChange={(e) => setDelayPerToken(Number(e.target.value))}
+                  className="text-sm"
+                />
+              </div>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
 
-      <div className="flex flex-col md:flex-row p-4 space-y-4 md:space-y-0 md:space-x-4">
-        <div className="w-full md:w-1/3">
-          <Card>
-            <CardContent className="flex flex-col space-y-4">
-              <Textarea
-                placeholder="Paste your text or upload a file..."
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                className="mb-4"
-              />
-              <div className="flex items-center space-x-4">
-                <label htmlFor="upload" className="text-sm font-medium">
-                  Upload File:
-                </label>
-                <Input
-                  type="file"
-                  id="upload"
-                  onChange={handleFileUpload}
-                  className="text-sm"
-                  accept=".txt,.md"
+      <div className="flex flex-row p-4 space-x-4">
+        {showSidebar && (
+          <div className="w-1/4">
+            <Card>
+              <CardContent className="flex flex-col space-y-4">
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="upload">
+                    <AccordionTrigger>Upload File</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex items-center space-x-4">
+                        <label htmlFor="upload" className="text-sm font-medium">
+                          Select File:
+                        </label>
+                        <Input
+                          type="file"
+                          id="upload"
+                          onChange={handleFileUpload}
+                          className="text-sm"
+                          accept=".txt,.md"
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                  <AccordionItem value="example">
+                    <AccordionTrigger>Load Example</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex flex-col space-y-2">
+                        {Object.keys(PREDEFINED_DOCS).map(docName => (
+                          <Button key={docName} variant="outline" size="sm" onClick={() => handlePredefinedDocLoad(docName)}>
+                            {docName}
+                          </Button>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+                <Textarea
+                  placeholder="Paste your text or upload a file..."
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  className="mb-4"
                 />
-              </div>
 
-                <div>
-                  <label htmlFor="outputSpeed" className="text-sm font-medium">
-                    Output Speed (tokens/sec):
+
+                <div className="flex flex-col space-y-2">
+                  <label htmlFor="pauseMultiplier" className="text-sm font-medium">
+                    Pause Multiplier:
                   </label>
                   <Input
-                      type="number"
-                      id="outputSpeed"
-                      value={outputSpeed}
-                      onChange={(e) => setOutputSpeed(Number(e.target.value))}
-                      className="text-sm"
+                    type="number"
+                    id="pauseMultiplier"
+                    value={pauseMultiplier}
+                    onChange={(e) => setPauseMultiplier(Number(e.target.value))}
+                    className="text-sm"
                   />
                 </div>
 
-              <div className="flex flex-col space-y-2">
-                <label htmlFor="pauseMultiplier" className="text-sm font-medium">
-                  Pause Multiplier:
-                </label>
-                <Input
-                  type="number"
-                  id="pauseMultiplier"
-                  value={pauseMultiplier}
-                  onChange={(e) => setPauseMultiplier(Number(e.target.value))}
-                  className="text-sm"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Load Example:</label>
-                <div className="flex flex-col space-y-2">
-                  {Object.keys(PREDEFINED_DOCS).map(docName => (
-                    <Button key={docName} variant="outline" size="sm" onClick={() => handlePredefinedDocLoad(docName)}>
-                      {docName}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div className="flex-grow">
           <Card>
@@ -313,10 +347,10 @@ export default function Home() {
                   remarkPlugins={[remarkGfm]}
                   components={{
                     p: React.Fragment,
-                    br: () => <br />, // Keep line breaks
+                    br: () => <br />,
                   }}
                 >
-                  {displayedMarkdown}
+                  {renderLineBreaks(displayedMarkdown)}
                 </ReactMarkdown>
               </ScrollArea>
             </CardContent>
