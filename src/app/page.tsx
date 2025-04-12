@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import React from 'react';
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +31,7 @@ const PAUSE_DURATIONS = {
   ':': 350,
   '—': 300,
   '...': 450,
+  '\n': 200, // Add pause for new lines
 };
 
 export default function Home() {
@@ -103,8 +105,6 @@ export default function Home() {
         title: "Finished!",
         description: "You've reached the end of the text.",
       });
-    } else {
-      setDisplayedMarkdown('');
     }
 
     return () => clearTimeout(timeoutId);
@@ -114,6 +114,7 @@ export default function Home() {
     setIsPlaying(prevIsPlaying => !prevIsPlaying);
     if (!isPlaying) {
         setCurrentWordIndex(0);
+        setDisplayedMarkdown(''); // Reset the display when starting
     }
   };
 
@@ -169,13 +170,12 @@ export default function Home() {
     };
   }, [isPlaying, togglePlay, currentWordIndex, tokens, displayedMarkdown]);
 
-
   return (
     
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <Toaster />
 
-      {/* Control Bar */}
+      
       <div className="sticky top-0 bg-secondary p-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <Button onClick={togglePlay}>
@@ -194,7 +194,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Settings Dropdown */}
+        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline">
@@ -237,7 +237,7 @@ export default function Home() {
         </DropdownMenu>
       </div>
 
-      {/* Text Input Area */}
+      
       <div className="p-4">
         <Textarea
           placeholder="Paste your text or upload a file..."
@@ -259,7 +259,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Settings Area */}
+      
       <div className="p-4 flex space-x-4">
         <Card className="w-1/2">
           <CardContent>
@@ -296,16 +296,19 @@ export default function Home() {
         </Card>
       </div>
 
-      {/* Text Display Area */}
+      
       <div className="flex-grow p-4">
         <Card>
           <CardContent>
-            <div className="h-[400px] relative overflow-auto">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-              >
-                {displayedMarkdown}
-              </ReactMarkdown>
+            <div className="h-[400px] relative overflow-auto whitespace-pre-line">
+                <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                        p: React.Fragment,
+                    }}
+                >
+                    {displayedMarkdown}
+                </ReactMarkdown>
             </div>
           </CardContent>
         </Card>
