@@ -36,7 +36,7 @@ export default function Home() {
   const [text, setText] = useState('');
   const [displayedMarkdown, setDisplayedMarkdown] = useState('');
   const [tokens, setTokens] = useState<string[]>([]);
-  const [wpm, setWpm] = useState(200);
+  const [delayPerToken, setDelayPerToken] = useState(100);
   const [pauseMultiplier, setPauseMultiplier] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
@@ -49,7 +49,7 @@ export default function Home() {
   const wordRef = useRef<HTMLDivElement>(null);
 
   // Function to parse text into tokens with Markdown support
- const parseText = useCallback((text: string) => {
+  const parseText = useCallback((text: string) => {
     const splitRegex = markdownEnabled
       ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g
       : /(\s+|[.?!,;:—…]+|\n)/g;
@@ -79,15 +79,13 @@ export default function Home() {
 
 
   const calculateDelay = useCallback((token: string) => {
-    let baseDelay = 60000 / wpm; // ms per word
+    let baseDelay = delayPerToken;
     if (Object.keys(PAUSE_DURATIONS).some(p => token.includes(p))) {
       const punctuation = Object.keys(PAUSE_DURATIONS).find(p => token.includes(p)) || '.';
       baseDelay = (PAUSE_DURATIONS as any)[punctuation] * pauseMultiplier;
-    } else {
-      baseDelay = baseDelay / token.split(" ").length;
     }
     return baseDelay;
-  }, [wpm, pauseMultiplier]);
+  }, [delayPerToken, pauseMultiplier]);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -151,7 +149,7 @@ export default function Home() {
         event.preventDefault();
         togglePlay();
       }
-       if (event.code === 'ArrowLeft') {
+      if (event.code === 'ArrowLeft') {
         event.preventDefault();
         setCurrentWordIndex(Math.max(0, currentWordIndex - 50));
         setDisplayedMarkdown(tokens.slice(0, Math.max(0, currentWordIndex - 50)).join(''));
@@ -160,7 +158,7 @@ export default function Home() {
       if (event.code === 'ArrowRight') {
         event.preventDefault();
         setCurrentWordIndex(Math.min(tokens.length, currentWordIndex + 50));
-         setDisplayedMarkdown(tokens.slice(0, Math.min(tokens.length, currentWordIndex + 50)).join(''));
+        setDisplayedMarkdown(tokens.slice(0, Math.min(tokens.length, currentWordIndex + 50)).join(''));
       }
     };
 
@@ -189,7 +187,7 @@ export default function Home() {
             Reset
           </Button>
           <div>
-            WPM: {wpm}
+            Delay Per Token: {delayPerToken}ms
           </div>
           <div>
             Pause Multiplier: {pauseMultiplier}x
@@ -213,7 +211,7 @@ export default function Home() {
                 <Switch checked={markdownEnabled} onCheckedChange={setMarkdownEnabled} />
               </div>
             </DropdownMenuItem>
-             <DropdownMenuItem>
+            <DropdownMenuItem>
               <div className="flex flex-col space-y-1">
                 Font Size
                 <div className="flex space-x-2">
@@ -223,8 +221,8 @@ export default function Home() {
                 </div>
               </div>
             </DropdownMenuItem>
-             <DropdownMenuItem>
-               <div className="flex flex-col space-y-1">
+            <DropdownMenuItem>
+              <div className="flex flex-col space-y-1">
                 Line Height
                 <Slider
                   defaultValue={[lineHeight]}
@@ -266,14 +264,14 @@ export default function Home() {
         <Card className="w-1/2">
           <CardContent>
             <div className="flex flex-col space-y-2">
-              <label htmlFor="wpm" className="text-sm font-medium">
-                Words Per Minute:
+              <label htmlFor="delayPerToken" className="text-sm font-medium">
+                Delay Per Token (ms):
               </label>
               <Input
                 type="number"
-                id="wpm"
-                value={wpm}
-                onChange={(e) => setWpm(Number(e.target.value))}
+                id="delayPerToken"
+                value={delayPerToken}
+                onChange={(e) => setDelayPerToken(Number(e.target.value))}
                 className="text-sm"
               />
             </div>
