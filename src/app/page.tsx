@@ -125,7 +125,35 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code === 'Space') {
+        event.preventDefault();
+        togglePlay();
+      }
+       if (event.code === 'ArrowLeft') {
+        event.preventDefault();
+        setCurrentWordIndex(Math.max(0, currentWordIndex - 50));
+        setDisplayedMarkdown(tokens.slice(0, Math.max(0, currentWordIndex - 50)).join(''));
+      }
+
+      if (event.code === 'ArrowRight') {
+        event.preventDefault();
+        setCurrentWordIndex(Math.min(tokens.length, currentWordIndex + 50));
+         setDisplayedMarkdown(tokens.slice(0, Math.min(tokens.length, currentWordIndex + 50)).join(''));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isPlaying, togglePlay, currentWordIndex, tokens, displayedMarkdown]);
+
+
   return (
+    <>
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <Toaster />
 
@@ -171,7 +199,7 @@ export default function Home() {
                 <div className="flex space-x-2">
                   <Button size="xs" variant={fontSize === 'sm' ? 'default' : 'outline'} onClick={() => setFontSize('sm')}>Small</Button>
                   <Button size="xs" variant={fontSize === 'md' ? 'default' : 'outline'} onClick={() => setFontSize('md')}>Medium</Button>
-                  <Button size="xs" variant={fontSize === 'lg' ? 'default' : 'outline'} onClick={()={() => setFontSize('lg')}>Large</Button>
+                  <Button size="xs" variant={fontSize === 'lg' ? 'default' : 'outline'} onClick={() => setFontSize('lg')}>Large</Button>
                 </div>
               </div>
             </DropdownMenuItem>
@@ -257,8 +285,17 @@ export default function Home() {
             <div className="h-[400px] relative overflow-auto">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
-                className={`markdown-body ${fontSize === 'sm' ? 'text-sm' : fontSize === 'lg' ? 'text-lg' : 'text-md'}`}
-                style={{ lineHeight: `${lineHeight}em` }}
+                components={{
+                  p: ({ node, ...props }) => (
+                    <p
+                      {...props}
+                      style={{
+                        fontSize: fontSize === 'sm' ? '14px' : fontSize === 'lg' ? '18px' : '16px',
+                        lineHeight: `${lineHeight}em`,
+                      }}
+                    />
+                  ),
+                }}
               >
                 {displayedMarkdown}
               </ReactMarkdown>
@@ -267,5 +304,6 @@ export default function Home() {
         </Card>
       </div>
     </div>
+    </>
   );
 }
