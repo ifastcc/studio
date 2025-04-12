@@ -111,11 +111,18 @@ export default function Home() {
   }, [isPlaying, currentWordIndex, tokens, calculateDelay, toast]);
 
   const togglePlay = () => {
-    setIsPlaying(prevIsPlaying => !prevIsPlaying);
-    if (!isPlaying) {
-        setCurrentWordIndex(0);
-        setDisplayedMarkdown(''); // Reset the display when starting
-    }
+    setIsPlaying(prevIsPlaying => {
+      // If pausing, just toggle the state
+      if (prevIsPlaying) {
+        return false;
+      } else {
+        // If starting, and at the beginning, reset the display
+        if (currentWordIndex === 0) {
+          setDisplayedMarkdown('');
+        }
+        return true;
+      }
+    });
   };
 
   const reset = () => {
