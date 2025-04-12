@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import React from 'react';
+import { useState, useRef, useEffect, useCallback } from "react";
+import React from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Toaster } from "@/components/ui/toaster";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -20,94 +20,104 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
+} from "@/components/ui/accordion";
 
 const PAUSE_DURATIONS = {
-  '.': 500,
-  '?': 600,
-  '!': 550,
-  ',': 300,
-  ';': 400,
-  ':': 350,
-  '—': 300,
-  '...': 450,
-  '\n': 200, // Add pause for new lines
+  ".": 500,
+  "?": 600,
+  "!": 550,
+  ",": 300,
+  ";": 400,
+  ":": 350,
+  "—": 300,
+  "...": 450,
+  "\n": 200, // Add pause for new lines
 };
 
 // Predefined documents
-const PREDEFINED_DOCS = {
-  'example.md': '## Example Markdown\n\nThis is an example document with **bold**, *italic*, and `code`.\n\n- List item 1\n- List item 2\n',
-  'lorem.txt': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+const PREDEFINED_DOCS: Record<string, string> = {
+  "example.md":
+    "## Example Markdown\n\nThis is an example document with **bold**, *italic*, and `code`.\n\n- List item 1\n- List item 2\n",
+  "lorem.txt":
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
 };
 
 export default function Home() {
-  const [text, setText] = useState('');
-  const [displayedMarkdown, setDisplayedMarkdown] = useState('');
+  const [text, setText] = useState("");
+  const [displayedMarkdown, setDisplayedMarkdown] = useState("");
   const [tokens, setTokens] = useState<string[]>([]);
-  const [delayPerToken, setDelayPerToken] = useState(50);
+  const [delayPerToken, setDelayPerToken] = useState(125);
   const [pauseMultiplier, setPauseMultiplier] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [markdownEnabled, setMarkdownEnabled] = useState(true);
-  const [fontSize, setFontSize] = useState<'sm' | 'md' | 'lg'>('md');
+  const [fontSize, setFontSize] = useState<"sm" | "md" | "lg">("md");
   const [lineHeight, setLineHeight] = useState(1.5);
   const [showSidebar, setShowSidebar] = useState(true);
 
   const { toast } = useToast();
   const wordRef = useRef<HTMLDivElement>(null);
 
-  const outputSpeed = 1000/delayPerToken;
+  const outputSpeed = 1000 / delayPerToken;
 
   // Function to parse text into tokens with Markdown support
-  const parseText = useCallback((text: string) => {
-    const splitRegex = markdownEnabled
-      ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g
-      : /(\s+|[.?!,;:—…]+|\n)/g;
+  const parseText = useCallback(
+    (text: string) => {
+      const splitRegex = markdownEnabled
+        ? /(\s+|[.?!,;:—…]+|\*\*|\*|`|\n)/g
+        : /(\s+|[.?!,;:—…]+|\n)/g;
 
-    // Improved splitting logic to handle Chinese characters
-    const chineseRegex = /([\u4e00-\u9fff]+)/g; // Regex to match Chinese characters
-    let newTokens: string[] = [];
-    text.split(chineseRegex).forEach(part => {
-      if (part) {
-        if (/[\u4e00-\u9fff]/.test(part)) {
-          // If the part contains Chinese characters, split it into individual characters
-          newTokens.push(...part.split(''));
-        } else {
-          // Otherwise, use the existing regex to split the part
-          newTokens.push(...part.split(splitRegex).filter(token => token !== ""));
+      // Improved splitting logic to handle Chinese characters
+      const chineseRegex = /([\u4e00-\u9fff]+)/g; // Regex to match Chinese characters
+      let newTokens: string[] = [];
+      text.split(chineseRegex).forEach((part) => {
+        if (part) {
+          if (/[\u4e00-\u9fff]/.test(part)) {
+            // If the part contains Chinese characters, split it into individual characters
+            newTokens.push(...part.split(""));
+          } else {
+            // Otherwise, use the existing regex to split the part
+            newTokens.push(
+              ...part.split(splitRegex).filter((token) => token !== "")
+            );
+          }
         }
-      }
-    });
+      });
 
-    return newTokens;
-  }, [markdownEnabled]);
+      return newTokens;
+    },
+    [markdownEnabled]
+  );
 
   useEffect(() => {
     const newTokens = parseText(text);
     setTokens(newTokens);
   }, [text, parseText]);
 
-
-  const calculateDelay = useCallback((token: string) => {
-    let baseDelay = delayPerToken;
-    if (Object.keys(PAUSE_DURATIONS).some(p => token.includes(p))) {
-      const punctuation = Object.keys(PAUSE_DURATIONS).find(p => token.includes(p)) || '.';
-      baseDelay = (PAUSE_DURATIONS as any)[punctuation] * pauseMultiplier;
-    }
-    return baseDelay;
-  }, [delayPerToken, pauseMultiplier]);
+  const calculateDelay = useCallback(
+    (token: string) => {
+      let baseDelay = delayPerToken;
+      if (Object.keys(PAUSE_DURATIONS).some((p) => token.includes(p))) {
+        const punctuation =
+          Object.keys(PAUSE_DURATIONS).find((p) => token.includes(p)) || ".";
+        baseDelay = (PAUSE_DURATIONS as any)[punctuation] * pauseMultiplier;
+      }
+      return baseDelay;
+    },
+    [delayPerToken, pauseMultiplier]
+  );
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -116,8 +126,10 @@ export default function Home() {
       const delay = calculateDelay(tokens[currentWordIndex]);
 
       timeoutId = setTimeout(() => {
-        setDisplayedMarkdown(prevMarkdown => prevMarkdown + tokens[currentWordIndex]);
-        setCurrentWordIndex(prevIndex => prevIndex + 1);
+        setDisplayedMarkdown(
+          (prevMarkdown) => prevMarkdown + tokens[currentWordIndex]
+        );
+        setCurrentWordIndex((prevIndex) => prevIndex + 1);
       }, delay);
     } else if (isPlaying && currentWordIndex >= tokens.length) {
       setIsPlaying(false);
@@ -131,13 +143,13 @@ export default function Home() {
   }, [isPlaying, currentWordIndex, tokens, calculateDelay, toast]);
 
   const togglePlay = () => {
-    setIsPlaying(prevIsPlaying => !prevIsPlaying);
+    setIsPlaying((prevIsPlaying) => !prevIsPlaying);
   };
 
   const reset = () => {
     setIsPlaying(false);
     setCurrentWordIndex(0);
-    setDisplayedMarkdown('');
+    setDisplayedMarkdown("");
   };
 
   // Function to handle file upload
@@ -162,41 +174,54 @@ export default function Home() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.code === 'Space') {
+      if (event.code === "Space") {
         event.preventDefault();
         togglePlay();
       }
-      if (event.code === 'ArrowLeft') {
+      if (event.code === "ArrowLeft") {
         event.preventDefault();
         setCurrentWordIndex(Math.max(0, currentWordIndex - 50));
-        setDisplayedMarkdown(tokens.slice(0, Math.max(0, currentWordIndex - 50)).join(''));
+        setDisplayedMarkdown(
+          tokens.slice(0, Math.max(0, currentWordIndex - 50)).join("")
+        );
       }
 
-      if (event.code === 'ArrowRight') {
+      if (event.code === "ArrowRight") {
         event.preventDefault();
         setCurrentWordIndex(Math.min(tokens.length, currentWordIndex + 50));
-        setDisplayedMarkdown(tokens.slice(0, Math.min(tokens.length, currentWordIndex + 50)).join(''));
+        setDisplayedMarkdown(
+          tokens
+            .slice(0, Math.min(tokens.length, currentWordIndex + 50))
+            .join("")
+        );
       }
 
-      if (event.code === 'ArrowUp') {
+      if (event.code === "ArrowUp") {
         event.preventDefault();
-        setDelayPerToken(prevDelay => Math.max(1, prevDelay - 5)); // Decrease delay, increase speed
+        setDelayPerToken((prevDelay) => Math.max(1, prevDelay - 5)); // Decrease delay, increase speed
       }
 
-      if (event.code === 'ArrowDown') {
+      if (event.code === "ArrowDown") {
         event.preventDefault();
-        setDelayPerToken(prevDelay => Math.min(500, prevDelay + 5)); // Increase delay, decrease speed
+        setDelayPerToken((prevDelay) => Math.min(500, prevDelay + 5)); // Increase delay, decrease speed
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isPlaying, togglePlay, currentWordIndex, tokens, displayedMarkdown, delayPerToken]);
+  }, [
+    isPlaying,
+    togglePlay,
+    currentWordIndex,
+    tokens,
+    displayedMarkdown,
+    delayPerToken,
+  ]);
 
-  const handlePredefinedDocLoad = (docName: string) => {
+  const handlePredefinedDocLoad = (docName: keyof typeof PREDEFINED_DOCS) => {
     setText(PREDEFINED_DOCS[docName]);
     reset();
   };
@@ -206,7 +231,7 @@ export default function Home() {
   };
 
   const renderLineBreaks = (text: string) => {
-    return text.split('\n').join('  \n');
+    return text.split("\n").join("  \n");
   };
 
   return (
@@ -221,19 +246,15 @@ export default function Home() {
           </Button>
           <Button onClick={togglePlay}>
             {isPlaying ? <Icons.pause /> : <Icons.play />}
-            {isPlaying ? 'Pause' : 'Play'}
+            {isPlaying ? "Pause" : "Play"}
           </Button>
           <Button onClick={reset}>
             <Icons.reset />
             Reset
           </Button>
 
-          <div>
-            Output Speed: {outputSpeed.toFixed(1)} tokens/sec
-          </div>
-          <div>
-            Pause Multiplier: {pauseMultiplier}x
-          </div>
+          <div>Output Speed: {outputSpeed.toFixed(1)} tokens/sec</div>
+          <div>Pause Multiplier: {pauseMultiplier}x</div>
         </div>
 
         <DropdownMenu>
@@ -249,17 +270,51 @@ export default function Home() {
             <DropdownMenuItem>
               <div className="flex items-center justify-between">
                 Markdown Rendering
-                <Switch checked={markdownEnabled} onCheckedChange={setMarkdownEnabled} />
+                <Switch
+                  checked={markdownEnabled}
+                  onCheckedChange={setMarkdownEnabled}
+                />
               </div>
             </DropdownMenuItem>
             <DropdownMenuItem>
               <div className="flex flex-col space-y-1">
                 Font Size
                 <div className="flex space-x-2">
-                  <Button size="xs" variant={fontSize === 'sm' ? 'default' : 'outline'} onClick={() => setFontSize('sm')}>Small</Button>
-                  <Button size="xs" variant={fontSize === 'md' ? 'default' : 'outline'} onClick={() => setFontSize('md')}>Medium</Button>
-                  <Button size="xs" variant={fontSize === 'lg' ? 'default' : 'outline'} onClick={() => setFontSize('lg')}>Large</Button>
+                  <Button
+                    size="sm"
+                    variant={fontSize === "sm" ? "default" : "outline"}
+                    onClick={() => setFontSize("sm")}
+                  >
+                    Small
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={fontSize === "md" ? "default" : "outline"}
+                    onClick={() => setFontSize("md")}
+                  >
+                    Medium
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={fontSize === "lg" ? "default" : "outline"}
+                    onClick={() => setFontSize("lg")}
+                  >
+                    Large
+                  </Button>
                 </div>
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <div className="flex flex-col space-y-1">
+                Line Height:
+                <Input
+                  type="number"
+                  value={lineHeight}
+                  onChange={(e) => setLineHeight(Number(e.target.value))}
+                  step="0.1"
+                  min="1"
+                  className="text-sm"
+                />
               </div>
             </DropdownMenuItem>
             <DropdownMenuItem>
@@ -304,8 +359,17 @@ export default function Home() {
                     <AccordionTrigger>Load Example</AccordionTrigger>
                     <AccordionContent>
                       <div className="flex flex-col space-y-2">
-                        {Object.keys(PREDEFINED_DOCS).map(docName => (
-                          <Button key={docName} variant="outline" size="sm" onClick={() => handlePredefinedDocLoad(docName)}>
+                        {Object.keys(PREDEFINED_DOCS).map((docName) => (
+                          <Button
+                            key={docName}
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handlePredefinedDocLoad(
+                                docName as keyof typeof PREDEFINED_DOCS
+                              )
+                            }
+                          >
                             {docName}
                           </Button>
                         ))}
@@ -320,9 +384,11 @@ export default function Home() {
                   className="mb-4"
                 />
 
-
                 <div className="flex flex-col space-y-2">
-                  <label htmlFor="pauseMultiplier" className="text-sm font-medium">
+                  <label
+                    htmlFor="pauseMultiplier"
+                    className="text-sm font-medium"
+                  >
                     Pause Multiplier:
                   </label>
                   <Input
@@ -333,7 +399,6 @@ export default function Home() {
                     className="text-sm"
                   />
                 </div>
-
               </CardContent>
             </Card>
           </div>
@@ -342,15 +407,26 @@ export default function Home() {
         <div className="flex-grow">
           <Card>
             <CardContent>
-              <ScrollArea className="h-[500px] relative overflow-auto whitespace-pre-line">
+              <ScrollArea className="h-[500px] relative overflow-auto whitespace-pre-wrap">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    p: React.Fragment,
+                    h1: ({ node, ...props }) => (
+                      <h1 className="text-2xl font-bold mb-4 mt-6" {...props} />
+                    ),
+                    h2: ({ node, ...props }) => (
+                      <h2
+                        className="text-xl font-semibold mt-6 mb-3"
+                        {...props}
+                      />
+                    ),
+                    p: ({ node, ...props }) => (
+                      <p className="my-4" {...props} />
+                    ),
                     br: () => <br />,
                   }}
                 >
-                  {renderLineBreaks(displayedMarkdown)}
+                  {displayedMarkdown}
                 </ReactMarkdown>
               </ScrollArea>
             </CardContent>
